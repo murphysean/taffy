@@ -19,6 +19,17 @@
 //! width computation.
 //!
 //! See: <https://drafts.csswg.org/css-tables-3/>
+//!
+//! ## Phase 1 Limitations
+//!
+//! This is a phase 1 implementation with known limitations:
+//! - Column widths are not coordinated across rows (each row sizes cells
+//!   independently). A future phase will extend tree traits for grandchild
+//!   access to enable proper column sizing.
+//! - `table-layout: fixed` is parsed but not yet implemented.
+//! - `border-collapse: collapse` is parsed but not yet implemented.
+//! - `colspan`/`rowspan` are stored in styles but not used by the algorithm.
+//! - `caption-side` is parsed but captions are not yet laid out.
 
 use crate::geometry::{Line, Point, Rect, Size};
 use crate::style::{AvailableSpace, CoreStyle};
@@ -45,8 +56,6 @@ pub fn compute_table_layout(
     let style = tree.get_table_container_style(node_id);
 
     // Pull these out earlier to avoid borrowing issues
-    let overflow = style.overflow();
-    let _is_scroll_container = overflow.x.is_scroll_container() || overflow.y.is_scroll_container();
     let aspect_ratio = style.aspect_ratio();
     let padding = style.padding().resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
     let border = style.border().resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
@@ -166,9 +175,7 @@ pub fn compute_table_layout(
             // They fill available width but not beyond max-content,
             // and not below min-content.
             match available_space.width {
-                AvailableSpace::Definite(avail) => {
-                    avail.max(table_min_content_width).min(table_max_content_width)
-                }
+                AvailableSpace::Definite(avail) => avail.max(table_min_content_width).min(table_max_content_width),
                 AvailableSpace::MinContent => table_min_content_width,
                 AvailableSpace::MaxContent => table_max_content_width,
             }
@@ -178,9 +185,7 @@ pub fn compute_table_layout(
     // Clamp content width to min/max (accounting for padding/border)
     let content_min = min_size.maybe_sub(padding_border_size);
     let content_max = max_size.maybe_sub(padding_border_size);
-    let content_width = content_width
-        .maybe_clamp(content_min.width, content_max.width)
-        .max(0.0);
+    let content_width = content_width.maybe_clamp(content_min.width, content_max.width).max(0.0);
 
     // The width available for rows (excluding border spacing)
     let row_content_width = (content_width - border_spacing_h * 2.0).max(0.0);
@@ -206,13 +211,17 @@ pub fn compute_table_layout(
     // Determine the table's content height (sum of row heights + border spacing)
     let content_height: f32 = match node_inner_size.height {
         Some(height) => height,
-        None => row_heights.iter().sum::<f32>() + border_spacing_v * 2.0,
+        None => {
+            if child_count > 0 {
+                row_heights.iter().sum::<f32>() + border_spacing_v * (child_count as f32 + 1.0)
+            } else {
+                0.0
+            }
+        }
     };
 
     // Clamp content height to min/max (accounting for padding/border)
-    let content_height = content_height
-        .maybe_clamp(content_min.height, content_max.height)
-        .max(0.0);
+    let content_height = content_height.maybe_clamp(content_min.height, content_max.height).max(0.0);
 
     let content_size = Size { width: content_width, height: content_height };
 
@@ -263,23 +272,8 @@ pub fn compute_table_layout(
         };
 
         tree.set_unrounded_layout(child_id, &child_layout);
-        y_offset += child_output.size.height;
+        y_offset += child_output.size.height + border_spacing_v;
     }
-
-    // Set the table's own layout
-    let table_layout = Layout {
-        order: 0,
-        location: Point { x: 0.0, y: 0.0 },
-        size: outer_size,
-        #[cfg(feature = "content_size")]
-        content_size,
-        scrollbar_size: Size::zero(),
-        padding,
-        border,
-        margin: Rect::zero(),
-    };
-
-    tree.set_unrounded_layout(node_id, &table_layout);
 
     LayoutOutput::from_sizes(outer_size, content_size)
 }

@@ -10,10 +10,10 @@ mod block;
 mod flex;
 #[cfg(feature = "float_layout")]
 mod float;
-#[cfg(feature = "table_layout")]
-mod table;
 #[cfg(feature = "grid")]
 mod grid;
+#[cfg(feature = "table_layout")]
+mod table;
 
 pub use self::alignment::{
     AlignContent, AlignContentKeyword, AlignItems, AlignItemsKeyword, AlignSelf, AlignmentSafety, JustifyContent,
@@ -30,8 +30,6 @@ pub use self::block::{BlockContainerStyle, BlockItemStyle, TextAlign};
 pub use self::flex::{FlexDirection, FlexWrap, FlexboxContainerStyle, FlexboxItemStyle};
 #[cfg(feature = "float_layout")]
 pub use self::float::{Clear, Float, FloatDirection};
-#[cfg(feature = "table_layout")]
-pub use self::table::{BorderCollapse, CaptionSide, TableContainerStyle, TableItemStyle, TableLayout};
 #[cfg(feature = "grid")]
 pub use self::grid::{
     GenericGridPlacement, GenericGridTemplateComponent, GenericRepetition, GridAutoFlow, GridAutoTracks,
@@ -44,6 +42,8 @@ pub(crate) use self::grid::{GridAreaAxis, GridAreaEnd};
 pub use self::grid::{GridTemplateArea, NamedGridLine, TemplateLineNames};
 #[cfg(feature = "grid")]
 pub(crate) use self::grid::{NonNamedGridPlacement, OriginZeroGridPlacement};
+#[cfg(feature = "table_layout")]
+pub use self::table::{BorderCollapse, CaptionSide, TableContainerStyle, TableItemStyle, TableLayout};
 
 use crate::geometry::{Point, Rect, Size};
 use crate::style_helpers::TaffyAuto as _;
@@ -221,11 +221,21 @@ impl Display {
     pub const DEFAULT: Display = Display::Block;
 
     /// The default Display mode
-    #[cfg(all(feature = "table_layout", not(feature = "flexbox"), not(feature = "grid"), not(feature = "block_layout")))]
+    #[cfg(all(
+        feature = "table_layout",
+        not(feature = "flexbox"),
+        not(feature = "grid"),
+        not(feature = "block_layout")
+    ))]
     pub const DEFAULT: Display = Display::Table;
 
     /// The default Display mode
-    #[cfg(all(not(feature = "flexbox"), not(feature = "grid"), not(feature = "block_layout"), not(feature = "table_layout")))]
+    #[cfg(all(
+        not(feature = "flexbox"),
+        not(feature = "grid"),
+        not(feature = "block_layout"),
+        not(feature = "table_layout")
+    ))]
     pub const DEFAULT: Display = Display::None;
 }
 
@@ -456,8 +466,11 @@ pub struct Style<S: CheapCloneStr = DefaultCheapStr> {
     pub dummy: core::marker::PhantomData<S>,
     /// What layout strategy should be used?
     pub display: Display,
-    /// Whether a child is display:table or not. This affects children of block layouts.
-    /// This should really be part of `Display`, but it is currently seperate because table layout isn't implemented
+    /// Whether a child should be treated as a table for block layout sizing purposes.
+    /// This is a legacy field that predates `Display::Table`. When `Display::Table` is
+    /// available (via the `table_layout` feature), `BlockItemStyle::is_table()` also
+    /// checks `CoreStyle::is_table()`, so this field is only needed for external
+    /// consumers who set `item_is_table` directly without using `Display::Table`.
     pub item_is_table: bool,
     /// Is it a replaced element like an image or form field?
     /// <https://drafts.csswg.org/css-sizing-3/#min-content-zero>

@@ -22,20 +22,20 @@ use crate::compute::{
 };
 use crate::CacheTree;
 
+#[cfg(feature = "table_layout")]
+use crate::compute::compute_table_layout;
+#[cfg(all(feature = "detailed_layout_info", feature = "grid"))]
+use crate::compute::grid::DetailedGridInfo;
+#[cfg(feature = "detailed_layout_info")]
+use crate::tree::layout::DetailedLayoutInfo;
+#[cfg(feature = "table_layout")]
+use crate::LayoutTableContainer;
 #[cfg(feature = "block_layout")]
 use crate::{compute::compute_block_layout, LayoutBlockContainer};
 #[cfg(feature = "flexbox")]
 use crate::{compute::compute_flexbox_layout, LayoutFlexboxContainer};
 #[cfg(feature = "grid")]
 use crate::{compute::compute_grid_layout, LayoutGridContainer};
-#[cfg(feature = "table_layout")]
-use crate::compute::compute_table_layout;
-#[cfg(feature = "table_layout")]
-use crate::LayoutTableContainer;
-#[cfg(all(feature = "detailed_layout_info", feature = "grid"))]
-use crate::compute::grid::DetailedGridInfo;
-#[cfg(feature = "detailed_layout_info")]
-use crate::tree::layout::DetailedLayoutInfo;
 
 /// The error Taffy generates on invalid operations
 pub type TaffyResult<T> = Result<T, TaffyError>;
