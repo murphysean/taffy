@@ -8,4 +8,5 @@ mod hand_written {
     mod rounding;
     mod safe_alignment;
     mod serde;
+    mod table;
 }
