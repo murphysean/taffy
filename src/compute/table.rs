@@ -121,8 +121,8 @@ pub fn compute_table_layout(
     // The table's max-content width is the max of all rows' max-content widths.
     // The table's min-content width is the max of all rows' min-content widths.
 
-    let mut row_max_content_widths: Vec<f32> = Vec::with_capacity(child_count);
-    let mut row_min_content_widths: Vec<f32> = Vec::with_capacity(child_count);
+    let mut row_max_content_widths: Vec<f32> = Vec::new();
+    let mut row_min_content_widths: Vec<f32> = Vec::new();
 
     for child_index in 0..child_count {
         let child_id = tree.get_child_id(node_id, child_index);
@@ -186,7 +186,7 @@ pub fn compute_table_layout(
     let row_content_width = (content_width - border_spacing_h * 2.0).max(0.0);
 
     // Phase 2: Measure each row's height with the resolved content width
-    let mut row_heights: Vec<f32> = Vec::with_capacity(child_count);
+    let mut row_heights: Vec<f32> = Vec::new();
 
     for child_index in 0..child_count {
         let child_id = tree.get_child_id(node_id, child_index);
