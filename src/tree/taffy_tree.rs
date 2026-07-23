@@ -28,6 +28,8 @@ use crate::{compute::compute_block_layout, LayoutBlockContainer};
 use crate::{compute::compute_flexbox_layout, LayoutFlexboxContainer};
 #[cfg(feature = "grid")]
 use crate::{compute::compute_grid_layout, LayoutGridContainer};
+#[cfg(feature = "table_layout")]
+use crate::compute::compute_table_layout;
 
 #[cfg(all(feature = "detailed_layout_info", feature = "grid"))]
 use crate::compute::grid::DetailedGridInfo;
@@ -246,6 +248,8 @@ impl<NodeContext> PrintTree for TaffyTree<NodeContext> {
             }
             #[cfg(feature = "grid")]
             (_, Display::Grid) => "GRID",
+            #[cfg(feature = "table_layout")]
+            (_, Display::Table) => "TABLE",
         }
     }
 
@@ -313,6 +317,8 @@ where
                 (Display::Block, true) => compute_block_layout(tree, node_id, inputs, block_ctx),
                 #[cfg(feature = "flexbox")]
                 (Display::Flex, true) => compute_flexbox_layout(tree, node_id, inputs),
+                #[cfg(feature = "table_layout")]
+                (Display::Table, true) => compute_table_layout(tree, node_id, inputs),
                 #[cfg(feature = "grid")]
                 (Display::Grid, true) => compute_grid_layout(tree, node_id, inputs),
                 (_, false) => {

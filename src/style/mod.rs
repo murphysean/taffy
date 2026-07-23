@@ -10,6 +10,8 @@ mod block;
 mod flex;
 #[cfg(feature = "float_layout")]
 mod float;
+#[cfg(feature = "table_layout")]
+mod table;
 #[cfg(feature = "grid")]
 mod grid;
 
@@ -28,6 +30,8 @@ pub use self::block::{BlockContainerStyle, BlockItemStyle, TextAlign};
 pub use self::flex::{FlexDirection, FlexWrap, FlexboxContainerStyle, FlexboxItemStyle};
 #[cfg(feature = "float_layout")]
 pub use self::float::{Clear, Float, FloatDirection};
+#[cfg(feature = "table_layout")]
+pub use self::table::{BorderCollapse, CaptionSide, TableContainerStyle, TableItemStyle};
 #[cfg(feature = "grid")]
 pub use self::grid::{
     GenericGridPlacement, GenericGridTemplateComponent, GenericRepetition, GridAutoFlow, GridAutoTracks,
@@ -91,6 +95,11 @@ pub trait CoreStyle {
     /// Is block layout?
     #[inline(always)]
     fn is_block(&self) -> bool {
+        false
+    }
+    /// Is table layout?
+    #[inline(always)]
+    fn is_table(&self) -> bool {
         false
     }
     /// Is it a compressible replaced element?
@@ -178,7 +187,7 @@ pub trait CoreStyle {
 
 /// Sets the layout used for the children of this node
 ///
-/// The default values depends on on which feature flags are enabled. The order of precedence is: Flex, Grid, Block, None.
+/// The default values depends on on which feature flags are enabled. The order of precedence is: Flex, Grid, Block, Table, None.
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Display {
@@ -191,6 +200,9 @@ pub enum Display {
     /// The children will follow the CSS Grid layout algorithm
     #[cfg(feature = "grid")]
     Grid,
+    /// The children will follow the CSS Table layout algorithm
+    #[cfg(feature = "table_layout")]
+    Table,
     /// The node is hidden, and it's children will also be hidden
     None,
 }
@@ -209,7 +221,11 @@ impl Display {
     pub const DEFAULT: Display = Display::Block;
 
     /// The default Display mode
-    #[cfg(all(not(feature = "flexbox"), not(feature = "grid"), not(feature = "block_layout")))]
+    #[cfg(all(feature = "table_layout", not(feature = "flexbox"), not(feature = "grid"), not(feature = "block_layout")))]
+    pub const DEFAULT: Display = Display::Table;
+
+    /// The default Display mode
+    #[cfg(all(not(feature = "flexbox"), not(feature = "grid"), not(feature = "block_layout"), not(feature = "table_layout")))]
     pub const DEFAULT: Display = Display::None;
 }
 
@@ -228,6 +244,8 @@ crate::util::parse::impl_parse_for_keyword_enum!(Display,
     "grid" => Grid,
     #[cfg(feature = "block_layout")]
     "block" => Block,
+    #[cfg(feature = "table_layout")]
+    "table" => Table,
 );
 
 impl core::fmt::Display for Display {
@@ -240,6 +258,8 @@ impl core::fmt::Display for Display {
             Display::Flex => write!(f, "FLEX"),
             #[cfg(feature = "grid")]
             Display::Grid => write!(f, "GRID"),
+            #[cfg(feature = "table_layout")]
+            Display::Table => write!(f, "TABLE"),
         }
     }
 }
@@ -683,6 +703,11 @@ impl<S: CheapCloneStr> CoreStyle for Style<S> {
         matches!(self.display, Display::Block)
     }
     #[inline(always)]
+    #[cfg(feature = "table_layout")]
+    fn is_table(&self) -> bool {
+        matches!(self.display, Display::Table)
+    }
+    #[inline(always)]
     fn is_compressible_replaced(&self) -> bool {
         self.item_is_replaced
     }
@@ -750,6 +775,10 @@ impl<T: CoreStyle> CoreStyle for &'_ T {
     #[inline(always)]
     fn is_block(&self) -> bool {
         (*self).is_block()
+    }
+    #[inline(always)]
+    fn is_table(&self) -> bool {
+        (*self).is_table()
     }
     #[inline(always)]
     fn is_compressible_replaced(&self) -> bool {
@@ -839,7 +868,7 @@ impl<T: BlockContainerStyle> BlockContainerStyle for &'_ T {
 impl<S: CheapCloneStr> BlockItemStyle for Style<S> {
     #[inline(always)]
     fn is_table(&self) -> bool {
-        self.item_is_table
+        self.item_is_table || CoreStyle::is_table(self)
     }
 
     #[cfg(feature = "float_layout")]
@@ -859,7 +888,7 @@ impl<S: CheapCloneStr> BlockItemStyle for Style<S> {
 impl<T: BlockItemStyle> BlockItemStyle for &'_ T {
     #[inline(always)]
     fn is_table(&self) -> bool {
-        (*self).is_table()
+        BlockItemStyle::is_table(*self)
     }
 
     #[cfg(feature = "float_layout")]
