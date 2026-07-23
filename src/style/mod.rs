@@ -31,7 +31,7 @@ pub use self::flex::{FlexDirection, FlexWrap, FlexboxContainerStyle, FlexboxItem
 #[cfg(feature = "float_layout")]
 pub use self::float::{Clear, Float, FloatDirection};
 #[cfg(feature = "table_layout")]
-pub use self::table::{BorderCollapse, CaptionSide, TableContainerStyle, TableItemStyle};
+pub use self::table::{BorderCollapse, CaptionSide, TableContainerStyle, TableItemStyle, TableLayout};
 #[cfg(feature = "grid")]
 pub use self::grid::{
     GenericGridPlacement, GenericGridTemplateComponent, GenericRepetition, GridAutoFlow, GridAutoTracks,
@@ -544,6 +544,29 @@ pub struct Style<S: CheapCloneStr = DefaultCheapStr> {
     #[cfg(feature = "block_layout")]
     pub text_align: TextAlign,
 
+    // Table container properties
+    /// Whether the table uses fixed or auto layout
+    #[cfg(feature = "table_layout")]
+    pub table_layout: TableLayout,
+    /// Whether table borders are collapsed or separated
+    #[cfg(feature = "table_layout")]
+    pub border_collapse: BorderCollapse,
+    /// The spacing between table cells (horizontal and vertical)
+    #[cfg(feature = "table_layout")]
+    #[cfg_attr(feature = "serde", serde(default = "style_helpers::zero"))]
+    pub border_spacing: Size<LengthPercentage>,
+    /// Whether the table caption is at the top or bottom
+    #[cfg(feature = "table_layout")]
+    pub caption_side: CaptionSide,
+
+    // Table item properties
+    /// The number of columns this cell spans (CSS colspan)
+    #[cfg(feature = "table_layout")]
+    pub column_span: u32,
+    /// The number of rows this cell spans (CSS rowspan)
+    #[cfg(feature = "table_layout")]
+    pub row_span: u32,
+
     // Flexbox container properties
     /// Which direction does the main axis flow in?
     #[cfg(feature = "flexbox")]
@@ -646,6 +669,19 @@ impl<S: CheapCloneStr> Style<S> {
         // Block
         #[cfg(feature = "block_layout")]
         text_align: TextAlign::Auto,
+        // Table
+        #[cfg(feature = "table_layout")]
+        table_layout: TableLayout::Auto,
+        #[cfg(feature = "table_layout")]
+        border_collapse: BorderCollapse::Separate,
+        #[cfg(feature = "table_layout")]
+        border_spacing: Size::zero(),
+        #[cfg(feature = "table_layout")]
+        caption_side: CaptionSide::Top,
+        #[cfg(feature = "table_layout")]
+        column_span: 1,
+        #[cfg(feature = "table_layout")]
+        row_span: 1,
         // Flexbox
         #[cfg(feature = "flexbox")]
         flex_direction: FlexDirection::Row,
@@ -901,6 +937,103 @@ impl<T: BlockItemStyle> BlockItemStyle for &'_ T {
     #[inline(always)]
     fn clear(&self) -> Clear {
         (*self).clear()
+    }
+}
+
+#[cfg(feature = "table_layout")]
+impl<S: CheapCloneStr> TableContainerStyle for Style<S> {
+    #[inline(always)]
+    fn border_collapse(&self) -> BorderCollapse {
+        self.border_collapse
+    }
+
+    #[inline(always)]
+    fn border_spacing(&self) -> Size<LengthPercentage> {
+        self.border_spacing
+    }
+
+    #[inline(always)]
+    fn caption_side(&self) -> CaptionSide {
+        self.caption_side
+    }
+
+    #[inline(always)]
+    fn table_layout(&self) -> TableLayout {
+        self.table_layout
+    }
+}
+
+#[cfg(feature = "table_layout")]
+impl<T: TableContainerStyle> TableContainerStyle for &'_ T {
+    #[inline(always)]
+    fn border_collapse(&self) -> BorderCollapse {
+        (*self).border_collapse()
+    }
+
+    #[inline(always)]
+    fn border_spacing(&self) -> Size<LengthPercentage> {
+        (*self).border_spacing()
+    }
+
+    #[inline(always)]
+    fn caption_side(&self) -> CaptionSide {
+        (*self).caption_side()
+    }
+
+    #[inline(always)]
+    fn table_layout(&self) -> TableLayout {
+        (*self).table_layout()
+    }
+}
+
+#[cfg(feature = "table_layout")]
+impl<S: CheapCloneStr> TableItemStyle for Style<S> {
+    #[inline(always)]
+    fn is_table_cell(&self) -> bool {
+        // A node is a table cell if it has display:table and is a child of a table row.
+        // However, at the style level we can't know the parent context. For now, we
+        // treat any non-table, non-block child of a table row as a cell.
+        false
+    }
+
+    #[inline(always)]
+    fn is_table_row(&self) -> bool {
+        // A row is identified by having display: Block and being a child of a table.
+        // The actual check is done structurally in the layout algorithm.
+        false
+    }
+
+    #[inline(always)]
+    fn column_span(&self) -> u32 {
+        self.column_span
+    }
+
+    #[inline(always)]
+    fn row_span(&self) -> u32 {
+        self.row_span
+    }
+}
+
+#[cfg(feature = "table_layout")]
+impl<T: TableItemStyle> TableItemStyle for &'_ T {
+    #[inline(always)]
+    fn is_table_cell(&self) -> bool {
+        (*self).is_table_cell()
+    }
+
+    #[inline(always)]
+    fn is_table_row(&self) -> bool {
+        (*self).is_table_row()
+    }
+
+    #[inline(always)]
+    fn column_span(&self) -> u32 {
+        (*self).column_span()
+    }
+
+    #[inline(always)]
+    fn row_span(&self) -> u32 {
+        (*self).row_span()
     }
 }
 
@@ -1269,6 +1402,18 @@ mod tests {
             gap: Size::zero(),
             #[cfg(feature = "block_layout")]
             text_align: Default::default(),
+            #[cfg(feature = "table_layout")]
+            table_layout: Default::default(),
+            #[cfg(feature = "table_layout")]
+            border_collapse: Default::default(),
+            #[cfg(feature = "table_layout")]
+            border_spacing: Size::zero(),
+            #[cfg(feature = "table_layout")]
+            caption_side: Default::default(),
+            #[cfg(feature = "table_layout")]
+            column_span: 1,
+            #[cfg(feature = "table_layout")]
+            row_span: 1,
             #[cfg(feature = "flexbox")]
             flex_grow: 0.0,
             #[cfg(feature = "flexbox")]
@@ -1371,16 +1516,21 @@ mod tests {
         assert_type_size::<Vec<TrackSizingFunction>>(24);
         assert_type_size::<Vec<GridTemplateComponent<S>>>(24);
 
+        // Table Container
+        assert_type_size::<TableLayout>(1);
+        assert_type_size::<BorderCollapse>(1);
+        assert_type_size::<CaptionSide>(1);
+
         // String-type dependent (String)
         assert_type_size::<GridTemplateComponent<String>>(56);
         assert_type_size::<GridPlacement<String>>(32);
         assert_type_size::<Line<GridPlacement<String>>>(64);
-        assert_type_size::<Style<String>>(544);
+        assert_type_size::<Style<String>>(576);
 
         // String-type dependent (Arc<str>)
         assert_type_size::<GridTemplateComponent<Arc<str>>>(56);
         assert_type_size::<GridPlacement<Arc<str>>>(24);
         assert_type_size::<Line<GridPlacement<Arc<str>>>>(48);
-        assert_type_size::<Style<Arc<str>>>(512);
+        assert_type_size::<Style<Arc<str>>>(544);
     }
 }
