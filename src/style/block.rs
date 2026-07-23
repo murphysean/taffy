@@ -20,9 +20,10 @@ pub trait BlockContainerStyle: CoreStyle {
 /// The set of styles required for a Block layout item (child of a Block container)
 pub trait BlockItemStyle: CoreStyle {
     /// Whether the item is a table. Table children are handled specially in block layout.
+    /// Delegates to `CoreStyle::is_table` by default.
     #[inline(always)]
     fn is_table(&self) -> bool {
-        false
+        CoreStyle::is_table(self)
     }
 
     /// Whether the item is a floated

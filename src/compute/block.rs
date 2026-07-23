@@ -646,7 +646,7 @@ fn generate_item_list(
             let is_not_floated = true;
 
             let is_block = child_style.is_block();
-            let is_table = child_style.is_table();
+            let is_table = BlockItemStyle::is_table(&child_style);
             let is_scroll_container = overflow.x.is_scroll_container() || overflow.y.is_scroll_container();
 
             let is_in_same_bfc: bool =
