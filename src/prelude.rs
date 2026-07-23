@@ -27,5 +27,8 @@ pub use crate::style_helpers::{
     evenly_sized_tracks, flex, fr, line, minmax, repeat, span, TaffyGridLine, TaffyGridSpan,
 };
 
+#[cfg(feature = "table_layout")]
+pub use crate::style::{BorderCollapse, CaptionSide, TableLayout};
+
 #[cfg(feature = "taffy_tree")]
 pub use crate::TaffyTree;

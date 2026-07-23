@@ -32,6 +32,7 @@ use crate::{compute::compute_grid_layout, LayoutGridContainer};
 use crate::compute::compute_table_layout;
 #[cfg(feature = "table_layout")]
 use crate::LayoutTableContainer;
+#[cfg(all(feature = "detailed_layout_info", feature = "grid"))]
 use crate::compute::grid::DetailedGridInfo;
 #[cfg(feature = "detailed_layout_info")]
 use crate::tree::layout::DetailedLayoutInfo;
