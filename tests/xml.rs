@@ -287,6 +287,17 @@ fn build_style<S: CheapCloneStr>(xnode: roxmltree::Node) -> taffy::Style<S> {
         justify_content: maybe_parse(xnode.attribute("justify-content")),
 
         text_align: parse_or_default(xnode.attribute("text-align")),
+
+        table_layout: parse_or_default(xnode.attribute("table-layout")),
+        border_collapse: parse_or_default(xnode.attribute("border-collapse")),
+        border_spacing: Size {
+            width: parse_or(xnode.attribute("border-spacing-x"), LengthPercentage::ZERO),
+            height: parse_or(xnode.attribute("border-spacing-y"), LengthPercentage::ZERO),
+        },
+        caption_side: parse_or_default(xnode.attribute("caption-side")),
+        column_span: parse_or(xnode.attribute("colspan"), 1),
+        row_span: parse_or(xnode.attribute("rowspan"), 1),
+
         flex_direction: parse_or_default(xnode.attribute("flex-direction")),
         flex_wrap: parse_or_default(xnode.attribute("flex-wrap")),
         flex_grow: parse_or(xnode.attribute("flex-grow"), 0.0),

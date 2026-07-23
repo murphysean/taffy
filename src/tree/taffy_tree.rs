@@ -30,8 +30,8 @@ use crate::{compute::compute_flexbox_layout, LayoutFlexboxContainer};
 use crate::{compute::compute_grid_layout, LayoutGridContainer};
 #[cfg(feature = "table_layout")]
 use crate::compute::compute_table_layout;
-
-#[cfg(all(feature = "detailed_layout_info", feature = "grid"))]
+#[cfg(feature = "table_layout")]
+use crate::LayoutTableContainer;
 use crate::compute::grid::DetailedGridInfo;
 #[cfg(feature = "detailed_layout_info")]
 use crate::tree::layout::DetailedLayoutInfo;
@@ -460,6 +460,32 @@ where
         block_ctx: Option<&mut BlockContext<'_>>,
     ) -> LayoutOutput {
         self.compute_child_layout(node_id, inputs, block_ctx)
+    }
+}
+
+#[cfg(feature = "table_layout")]
+impl<NodeContext, MeasureFunction> LayoutTableContainer for TaffyView<'_, NodeContext, MeasureFunction>
+where
+    MeasureFunction:
+        FnMut(Size<Option<f32>>, Size<AvailableSpace>, NodeId, Option<&mut NodeContext>, &Style) -> Size<f32>,
+{
+    type TableContainerStyle<'a>
+        = &'a Style
+    where
+        Self: 'a;
+    type TableItemStyle<'a>
+        = &'a Style
+    where
+        Self: 'a;
+
+    #[inline(always)]
+    fn get_table_container_style(&self, node_id: NodeId) -> Self::TableContainerStyle<'_> {
+        &self.taffy.nodes[node_id.into()].style
+    }
+
+    #[inline(always)]
+    fn get_table_child_style(&self, child_node_id: NodeId) -> Self::TableItemStyle<'_> {
+        &self.taffy.nodes[child_node_id.into()].style
     }
 }
 
