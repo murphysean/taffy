@@ -71,117 +71,71 @@ use crate::{CacheTree, MaybeMath, MaybeResolve};
 pub fn compute_root_layout(tree: &mut impl LayoutPartialTree, root: NodeId, available_space: Size<AvailableSpace>) {
     let mut known_dimensions = Size::NONE;
 
-    #[cfg(feature = "block_layout")]
-    {
+    // Block and table nodes stretch their width to fill available space at the root level.
+    // This check is shared between both layout modes to avoid duplication.
+    let should_stretch_root = {
+        let style = tree.get_core_container_style(root);
+        let mut result = false;
+        #[cfg(feature = "block_layout")]
+        {
+            result = result || style.is_block();
+        }
+        #[cfg(feature = "table_layout")]
+        {
+            result = result || style.is_table();
+        }
+        result
+    };
+
+    if should_stretch_root {
         use crate::BoxSizing;
 
         let parent_size = available_space.into_options();
         let style = tree.get_core_container_style(root);
 
-        if style.is_block() {
-            // Pull these out earlier to avoid borrowing issues
-            let aspect_ratio = style.aspect_ratio();
-            let margin = style.margin().resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
-            let padding = style.padding().resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
-            let border = style.border().resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
-            let padding_border_size = (padding + border).sum_axes();
-            let box_sizing_adjustment =
-                if style.box_sizing() == BoxSizing::ContentBox { padding_border_size } else { Size::ZERO };
+        // Pull these out earlier to avoid borrowing issues
+        let aspect_ratio = style.aspect_ratio();
+        let margin = style.margin().resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
+        let padding = style.padding().resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
+        let border = style.border().resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
+        let padding_border_size = (padding + border).sum_axes();
+        let box_sizing_adjustment =
+            if style.box_sizing() == BoxSizing::ContentBox { padding_border_size } else { Size::ZERO };
 
-            let min_size = style
-                .min_size()
-                .maybe_resolve(parent_size, |val, basis| tree.calc(val, basis))
-                .maybe_apply_aspect_ratio(aspect_ratio)
-                .maybe_add(box_sizing_adjustment);
-            let max_size = style
-                .max_size()
-                .maybe_resolve(parent_size, |val, basis| tree.calc(val, basis))
-                .maybe_apply_aspect_ratio(aspect_ratio)
-                .maybe_add(box_sizing_adjustment);
-            let clamped_style_size = style
-                .size()
-                .maybe_resolve(parent_size, |val, basis| tree.calc(val, basis))
-                .maybe_apply_aspect_ratio(aspect_ratio)
-                .maybe_add(box_sizing_adjustment)
-                .maybe_clamp(min_size, max_size);
+        let min_size = style
+            .min_size()
+            .maybe_resolve(parent_size, |val, basis| tree.calc(val, basis))
+            .maybe_apply_aspect_ratio(aspect_ratio)
+            .maybe_add(box_sizing_adjustment);
+        let max_size = style
+            .max_size()
+            .maybe_resolve(parent_size, |val, basis| tree.calc(val, basis))
+            .maybe_apply_aspect_ratio(aspect_ratio)
+            .maybe_add(box_sizing_adjustment);
+        let clamped_style_size = style
+            .size()
+            .maybe_resolve(parent_size, |val, basis| tree.calc(val, basis))
+            .maybe_apply_aspect_ratio(aspect_ratio)
+            .maybe_add(box_sizing_adjustment)
+            .maybe_clamp(min_size, max_size);
 
-            // If both min and max in a given axis are set and max <= min then this determines the size in that axis
-            let min_max_definite_size = min_size.zip_map(max_size, |min, max| match (min, max) {
-                (Some(min), Some(max)) if max <= min => Some(min),
-                _ => None,
-            });
+        // If both min and max in a given axis are set and max <= min then this determines the size in that axis
+        let min_max_definite_size = min_size.zip_map(max_size, |min, max| match (min, max) {
+            (Some(min), Some(max)) if max <= min => Some(min),
+            _ => None,
+        });
 
-            // Block nodes automatically stretch fit their width to fit available space if available space is definite
-            let available_space_based_size = Size {
-                width: available_space.width.into_option().maybe_sub(margin.horizontal_axis_sum()),
-                height: None,
-            };
+        // Block and table nodes automatically stretch their width to fit available space if it is definite
+        let available_space_based_size =
+            Size { width: available_space.width.into_option().maybe_sub(margin.horizontal_axis_sum()), height: None };
 
-            let styled_based_known_dimensions = known_dimensions
-                .or(min_max_definite_size)
-                .or(clamped_style_size)
-                .or(available_space_based_size)
-                .maybe_max(padding_border_size);
+        let styled_based_known_dimensions = known_dimensions
+            .or(min_max_definite_size)
+            .or(clamped_style_size)
+            .or(available_space_based_size)
+            .maybe_max(padding_border_size);
 
-            known_dimensions = styled_based_known_dimensions;
-        }
-    }
-
-    #[cfg(feature = "table_layout")]
-    {
-        use crate::BoxSizing;
-
-        let parent_size = available_space.into_options();
-        let style = tree.get_core_container_style(root);
-
-        if style.is_table() {
-            // Pull these out earlier to avoid borrowing issues
-            let aspect_ratio = style.aspect_ratio();
-            let margin = style.margin().resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
-            let padding = style.padding().resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
-            let border = style.border().resolve_or_zero(parent_size.width, |val, basis| tree.calc(val, basis));
-            let padding_border_size = (padding + border).sum_axes();
-            let box_sizing_adjustment =
-                if style.box_sizing() == BoxSizing::ContentBox { padding_border_size } else { Size::ZERO };
-
-            let min_size = style
-                .min_size()
-                .maybe_resolve(parent_size, |val, basis| tree.calc(val, basis))
-                .maybe_apply_aspect_ratio(aspect_ratio)
-                .maybe_add(box_sizing_adjustment);
-            let max_size = style
-                .max_size()
-                .maybe_resolve(parent_size, |val, basis| tree.calc(val, basis))
-                .maybe_apply_aspect_ratio(aspect_ratio)
-                .maybe_add(box_sizing_adjustment);
-            let clamped_style_size = style
-                .size()
-                .maybe_resolve(parent_size, |val, basis| tree.calc(val, basis))
-                .maybe_apply_aspect_ratio(aspect_ratio)
-                .maybe_add(box_sizing_adjustment)
-                .maybe_clamp(min_size, max_size);
-
-            // If both min and max in a given axis are set and max <= min then this determines the size in that axis
-            let min_max_definite_size = min_size.zip_map(max_size, |min, max| match (min, max) {
-                (Some(min), Some(max)) if max <= min => Some(min),
-                _ => None,
-            });
-
-            // Table nodes (like block nodes) stretch fit their width to fit available space
-            // if available space is definite and no explicit width is set
-            let available_space_based_size = Size {
-                width: available_space.width.into_option().maybe_sub(margin.horizontal_axis_sum()),
-                height: None,
-            };
-
-            let styled_based_known_dimensions = known_dimensions
-                .or(min_max_definite_size)
-                .or(clamped_style_size)
-                .or(available_space_based_size)
-                .maybe_max(padding_border_size);
-
-            known_dimensions = styled_based_known_dimensions;
-        }
+        known_dimensions = styled_based_known_dimensions;
     }
 
     // Recursively compute node layout

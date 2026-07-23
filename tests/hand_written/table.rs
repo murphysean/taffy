@@ -12,16 +12,12 @@
 //! - Integration with block layout (table as block child)
 
 use taffy::prelude::*;
-use taffy::style_helpers::*;
 use taffy::{AvailableSpace, Display, Layout, LengthPercentage, Rect, Size, Style, TaffyTree};
 use taffy_test_helpers::{new_test_tree, TestNodeContext};
 
 /// Helper: create a table cell (leaf node) with a fixed size
 fn cell(width: f32, height: f32) -> Style {
-    Style {
-        size: Size::from_lengths(width, height),
-        ..Default::default()
-    }
+    Style { size: Size::from_lengths(width, height), ..Default::default() }
 }
 
 /// Helper: create a LengthPercentage rect from f32 values
@@ -36,10 +32,7 @@ fn lp_rect(left: f32, right: f32, top: f32, bottom: f32) -> Rect<LengthPercentag
 
 /// Helper: create a LengthPercentage size from f32 values
 fn lp_size(width: f32, height: f32) -> Size<LengthPercentage> {
-    Size {
-        width: LengthPercentage::from_length(width),
-        height: LengthPercentage::from_length(height),
-    }
+    Size { width: LengthPercentage::from_length(width), height: LengthPercentage::from_length(height) }
 }
 
 /// Helper: get the layout of a node
@@ -69,20 +62,8 @@ fn assert_size(taffy: &TaffyTree<TestNodeContext>, node: taffy::NodeId, width: f
 /// Helper: assert a node's position
 fn assert_position(taffy: &TaffyTree<TestNodeContext>, node: taffy::NodeId, x: f32, y: f32) {
     let layout = get_layout(taffy, node);
-    assert!(
-        (layout.location.x - x).abs() < 0.1,
-        "expected x {} but got {} for node {:?}",
-        x,
-        layout.location.x,
-        node
-    );
-    assert!(
-        (layout.location.y - y).abs() < 0.1,
-        "expected y {} but got {} for node {:?}",
-        y,
-        layout.location.y,
-        node
-    );
+    assert!((layout.location.x - x).abs() < 0.1, "expected x {} but got {} for node {:?}", x, layout.location.x, node);
+    assert!((layout.location.y - y).abs() < 0.1, "expected y {} but got {} for node {:?}", y, layout.location.y, node);
 }
 
 #[test]
@@ -145,7 +126,8 @@ fn table_multiple_rows() {
     let r1c1 = taffy.new_leaf(cell(120.0, 40.0)).unwrap();
     let row1 = taffy.new_with_children(Style { display: Display::Flex, ..Default::default() }, &[r1c0, r1c1]).unwrap();
 
-    let table = taffy.new_with_children(Style { display: Display::Table, ..Default::default() }, &[row0, row1]).unwrap();
+    let table =
+        taffy.new_with_children(Style { display: Display::Table, ..Default::default() }, &[row0, row1]).unwrap();
     taffy.compute_layout_with_measure(table, Size::MAX_CONTENT, taffy_test_helpers::test_measure_function).unwrap();
 
     // Column widths are approximated: each row is measured independently.
@@ -204,12 +186,21 @@ fn table_with_padding_and_border() {
 #[test]
 fn table_with_explicit_width() {
     let mut taffy = new_test_tree();
-    let cell0 = taffy.new_leaf(Style { size: Size::from_lengths(100.0, 50.0), flex_grow: 1.0, ..Default::default() }).unwrap();
-    let cell1 = taffy.new_leaf(Style { size: Size::from_lengths(100.0, 50.0), flex_grow: 1.0, ..Default::default() }).unwrap();
+    let cell0 =
+        taffy.new_leaf(Style { size: Size::from_lengths(100.0, 50.0), flex_grow: 1.0, ..Default::default() }).unwrap();
+    let cell1 =
+        taffy.new_leaf(Style { size: Size::from_lengths(100.0, 50.0), flex_grow: 1.0, ..Default::default() }).unwrap();
     let row = taffy.new_with_children(Style { display: Display::Flex, ..Default::default() }, &[cell0, cell1]).unwrap();
     let table = taffy
         .new_with_children(
-            Style { display: Display::Table, size: Size { width: taffy::style::Dimension::from_length(400.0), height: taffy::style::Dimension::AUTO }, ..Default::default() },
+            Style {
+                display: Display::Table,
+                size: Size {
+                    width: taffy::style::Dimension::from_length(400.0),
+                    height: taffy::style::Dimension::AUTO,
+                },
+                ..Default::default()
+            },
             &[row],
         )
         .unwrap();
@@ -230,7 +221,14 @@ fn table_with_explicit_height() {
     let row = taffy.new_with_children(Style { display: Display::Flex, ..Default::default() }, &[cell0]).unwrap();
     let table = taffy
         .new_with_children(
-            Style { display: Display::Table, size: Size { width: taffy::style::Dimension::AUTO, height: taffy::style::Dimension::from_length(200.0) }, ..Default::default() },
+            Style {
+                display: Display::Table,
+                size: Size {
+                    width: taffy::style::Dimension::AUTO,
+                    height: taffy::style::Dimension::from_length(200.0),
+                },
+                ..Default::default()
+            },
             &[row],
         )
         .unwrap();
@@ -249,11 +247,7 @@ fn table_with_min_max_constraints() {
     let row = taffy.new_with_children(Style { display: Display::Flex, ..Default::default() }, &[cell]).unwrap();
     let table = taffy
         .new_with_children(
-            Style {
-                display: Display::Table,
-                min_size: Size::from_lengths(150.0, 80.0),
-                ..Default::default()
-            },
+            Style { display: Display::Table, min_size: Size::from_lengths(150.0, 80.0), ..Default::default() },
             &[row],
         )
         .unwrap();
@@ -267,9 +261,8 @@ fn table_with_min_max_constraints() {
 fn table_with_colspan() {
     let mut taffy = new_test_tree();
     // 3 columns, but the first cell spans 2 columns
-    let cell0 = taffy
-        .new_leaf(Style { size: Size::from_lengths(200.0, 50.0), column_span: 2, ..Default::default() })
-        .unwrap();
+    let cell0 =
+        taffy.new_leaf(Style { size: Size::from_lengths(200.0, 50.0), column_span: 2, ..Default::default() }).unwrap();
     let cell1 = taffy.new_leaf(cell(100.0, 50.0)).unwrap();
     let row = taffy.new_with_children(Style { display: Display::Flex, ..Default::default() }, &[cell0, cell1]).unwrap();
 
@@ -277,7 +270,8 @@ fn table_with_colspan() {
     let r1c0 = taffy.new_leaf(cell(80.0, 40.0)).unwrap();
     let r1c1 = taffy.new_leaf(cell(80.0, 40.0)).unwrap();
     let r1c2 = taffy.new_leaf(cell(80.0, 40.0)).unwrap();
-    let row1 = taffy.new_with_children(Style { display: Display::Flex, ..Default::default() }, &[r1c0, r1c1, r1c2]).unwrap();
+    let row1 =
+        taffy.new_with_children(Style { display: Display::Flex, ..Default::default() }, &[r1c0, r1c1, r1c2]).unwrap();
 
     let table = taffy.new_with_children(Style { display: Display::Table, ..Default::default() }, &[row, row1]).unwrap();
     taffy.compute_layout_with_measure(table, Size::MAX_CONTENT, taffy_test_helpers::test_measure_function).unwrap();
@@ -300,12 +294,13 @@ fn table_stretch_to_available_width() {
 
     // Give the table a definite available width of 500px as the root node
     // Tables are block-level and should stretch to fill available width at the root
-    taffy.compute_layout_with_measure(
-        table,
-        Size { width: AvailableSpace::Definite(500.0), height: AvailableSpace::MaxContent },
-        taffy_test_helpers::test_measure_function,
-    )
-    .unwrap();
+    taffy
+        .compute_layout_with_measure(
+            table,
+            Size { width: AvailableSpace::Definite(500.0), height: AvailableSpace::MaxContent },
+            taffy_test_helpers::test_measure_function,
+        )
+        .unwrap();
 
     // Table should stretch to fill the available width (block-level behavior at root)
     assert_size(&taffy, table, 500.0, 50.0);
@@ -356,11 +351,7 @@ fn table_with_border_spacing() {
     let row = taffy.new_with_children(Style { display: Display::Flex, ..Default::default() }, &[cell0, cell1]).unwrap();
     let table = taffy
         .new_with_children(
-            Style {
-                display: Display::Table,
-                border_spacing: lp_size(5.0, 3.0),
-                ..Default::default()
-            },
+            Style { display: Display::Table, border_spacing: lp_size(5.0, 3.0), ..Default::default() },
             &[row],
         )
         .unwrap();
@@ -379,28 +370,64 @@ fn table_nested() {
     let mut taffy = new_test_tree();
     // Inner table: 1 row, 1 cell of 60x30
     let inner_cell = taffy.new_leaf(cell(60.0, 30.0)).unwrap();
-    let inner_row = taffy
-        .new_with_children(Style { display: Display::Flex, ..Default::default() }, &[inner_cell])
-        .unwrap();
-    let inner_table = taffy
-        .new_with_children(Style { display: Display::Table, ..Default::default() }, &[inner_row])
-        .unwrap();
+    let inner_row =
+        taffy.new_with_children(Style { display: Display::Flex, ..Default::default() }, &[inner_cell]).unwrap();
+    let inner_table =
+        taffy.new_with_children(Style { display: Display::Table, ..Default::default() }, &[inner_row]).unwrap();
 
     // Outer table: 1 row, 1 cell containing the inner table
-    let outer_cell = taffy
-        .new_with_children(Style { display: Display::Flex, ..Default::default() }, &[inner_table])
-        .unwrap();
-    let outer_row = taffy
-        .new_with_children(Style { display: Display::Flex, ..Default::default() }, &[outer_cell])
-        .unwrap();
-    let outer_table = taffy
-        .new_with_children(Style { display: Display::Table, ..Default::default() }, &[outer_row])
-        .unwrap();
+    let outer_cell =
+        taffy.new_with_children(Style { display: Display::Flex, ..Default::default() }, &[inner_table]).unwrap();
+    let outer_row =
+        taffy.new_with_children(Style { display: Display::Flex, ..Default::default() }, &[outer_cell]).unwrap();
+    let outer_table =
+        taffy.new_with_children(Style { display: Display::Table, ..Default::default() }, &[outer_row]).unwrap();
 
-    taffy.compute_layout_with_measure(outer_table, Size::MAX_CONTENT, taffy_test_helpers::test_measure_function).unwrap();
+    taffy
+        .compute_layout_with_measure(outer_table, Size::MAX_CONTENT, taffy_test_helpers::test_measure_function)
+        .unwrap();
 
     // Inner table should be 60x30
     assert_size(&taffy, inner_table, 60.0, 30.0);
     // Outer table should be 60x30 (containing the inner table)
     assert_size(&taffy, outer_table, 60.0, 30.0);
+}
+
+#[test]
+fn table_multiple_rows_with_border_spacing() {
+    let mut taffy = new_test_tree();
+    // Three rows, each with one cell
+    let r0c0 = taffy.new_leaf(cell(100.0, 40.0)).unwrap();
+    let row0 = taffy.new_with_children(Style { display: Display::Flex, ..Default::default() }, &[r0c0]).unwrap();
+
+    let r1c0 = taffy.new_leaf(cell(100.0, 30.0)).unwrap();
+    let row1 = taffy.new_with_children(Style { display: Display::Flex, ..Default::default() }, &[r1c0]).unwrap();
+
+    let r2c0 = taffy.new_leaf(cell(100.0, 20.0)).unwrap();
+    let row2 = taffy.new_with_children(Style { display: Display::Flex, ..Default::default() }, &[r2c0]).unwrap();
+
+    let table = taffy
+        .new_with_children(
+            Style { display: Display::Table, border_spacing: lp_size(5.0, 10.0), ..Default::default() },
+            &[row0, row1, row2],
+        )
+        .unwrap();
+    taffy.compute_layout_with_measure(table, Size::MAX_CONTENT, taffy_test_helpers::test_measure_function).unwrap();
+
+    // 3 rows produce (3+1) = 4 vertical spacing gaps of 10px each = 40px
+    // Content height = 40 + 30 + 20 + 4*10 = 130
+    // Width = 100 + 2*5 (left+right spacing) = 110
+    assert_size(&taffy, table, 110.0, 130.0);
+
+    // Row 0: offset by border_spacing (x=5, y=10)
+    assert_position(&taffy, row0, 5.0, 10.0);
+    assert_size(&taffy, row0, 100.0, 40.0);
+
+    // Row 1: offset by spacing_v after row 0 (y = 10 + 40 + 10 = 60)
+    assert_position(&taffy, row1, 5.0, 60.0);
+    assert_size(&taffy, row1, 100.0, 30.0);
+
+    // Row 2: offset by spacing_v after row 1 (y = 60 + 30 + 10 = 100)
+    assert_position(&taffy, row2, 5.0, 100.0);
+    assert_size(&taffy, row2, 100.0, 20.0);
 }
